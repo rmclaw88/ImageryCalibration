@@ -9,10 +9,9 @@ for currentFile in currentDirectory.iterdir():
         uncompress_path = path.join(path.dirname(__file__), 'Uncompress/%s' % (currentFile.name.replace('.tar.gz', '')))
         # uncompress_path = path.join(path.dirname(__file__), 'Uncompress/%s' % (currentFile.name.replace('.zip', '')))
         makedirs(uncompress_path, exist_ok=False)
-        print('UNZIPPING ', currentFile, '\nINTO ', uncompress_path)
+        print('UNZIPPING ', currentFile, '\nINTO ', uncompress_path, '\n\n')
         tar_ref = tarfile.open(currentFile, 'r')
         tar_ref.extractall(uncompress_path)
-        print('done\n\n')
         tar_ref.close()
     except IOError as e:
         print('cannot unzip file, folder %s already exist' % currentFile.name)

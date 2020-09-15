@@ -2,24 +2,33 @@ import os
 import math
 import arcpy    # Arcpy 3.8 (Arcpy Pro)
 import pathlib
+import shutil
 from itertools import chain
 
-"""To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it"""
-"""The Uncompress folder should be in the same root directory as this python file"""
-"""For Only Landsat TM, ETM+ and OLI (5,7 and 8 Respectively)"""
-"""No correction for Landsat 7 Scan Line Error. Delete gap_mask folder within Landsat 7 Folder"""
-"""Used to Perform Radiometric Calibration, Atmospheric Correction and Composite on VIS-IR Bands"""
+"""To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it
+The Uncompress folder should be in the same root directory as this python file
+For Only Landsat TM, ETM+ and OLI (5,7 and 8 Respectively)
+Used to Perform Radiometric Calibration, Atmospheric Correction and Composite on VIS-IR Bands"""
 
 sunElev = 0
-bandGainsValue = 0
-bandOffsetValue = 0
+GainsOffset = {}
 
 
-def landsatPreProcess():
+def removeGapMaskDir():
+    rootDir = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Uncompress'))
+    for root, folders, files in os.walk(rootDir):
+        for folder in folders:
+            if folder.startswith('gap_mask'):
+                gapMaskDir = os.path.join(root, folder)
+                shutil.rmtree(gapMaskDir)
+                print(gapMaskDir, " Deleted")
+    landsatPreProcess(rootDir)
+
+
+def landsatPreProcess(workingDir):
     ResultsFolder = pathlib.Path(os.path.join(os.path.dirname(__file__), "Processed"))
     os.makedirs(ResultsFolder, exist_ok=True)
-    print("Results Folder Created\n")
-    workingDir = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Uncompress'))
+    print("\n\nResults Folder Created\n")
     for root, folders, files in os.walk(workingDir):
         for folder in folders:
             SceneDir = os.path.join(root, folder)
@@ -81,44 +90,27 @@ def readSunElevation(CurWorkspace):
                 MTL.close()
 
 
-def readGains(curWorkspace, layer):
-    global bandGainsValue
-    bandValue = str(layer.split("_")[-1][1])
+def readGainsOffset(curWorkspace, bandValue):
+    global GainsOffset
     for root, directory, files in os.walk(curWorkspace):
         for file in files:
             if file.endswith("MTL.txt"):
                 metadata = os.path.join(root, file)
                 with open(metadata, "r") as MTL:
                     for line in MTL:
-                        if line.__contains__("REFLECTANCE_MULT_BAND_" + bandValue):
-                            bandGainsRow = line.strip()
-                            bandGainsValue = float(bandGainsRow.split("=")[1])
-                            return bandGainsValue
-                MTL.close()
-
-
-def readOffset(curWorkspace, layer):
-    global bandOffsetValue
-    bandValue = str(layer.split("_")[-1][1])
-    for root, directory, files in os.walk(curWorkspace):
-        for file in files:
-            if file.endswith("MTL.txt"):
-                metadata = os.path.join(root, file)
-                with open(metadata, "r") as MTL:
-                    for line in MTL:
-                        if line.__contains__("REFLECTANCE_ADD_BAND_" + bandValue):
-                            bandOffsetRow = line.strip()
-                            bandOffsetValue = float(bandOffsetRow.split("=")[1])
-                            return bandOffsetValue
+                        if line.__contains__("REFLECTANCE_MULT_BAND_" + bandValue) or \
+                                line.__contains__("REFLECTANCE_ADD_BAND_" + bandValue):
+                            row = line.strip().split("=")
+                            GainsOffset[row[0].strip()] = float(row[1])
                 MTL.close()
 
 
 def Correction(env, band, radiance, saveDir):
     arcpy.CheckOutExtension('Spatial')
-    readGains(env, band)
-    band_RefMul = bandGainsValue
-    readOffset(env, band)
-    band_RefAdd = bandOffsetValue
+    specificBand = str(band.split("_")[-1][1])
+    readGainsOffset(env, specificBand)
+    band_RefMul = GainsOffset['REFLECTANCE_MULT_BAND_' + specificBand]
+    band_RefAdd = GainsOffset['REFLECTANCE_ADD_BAND_' + specificBand]
     print("{0} has a Gain, Offset and Radiance Values of {1}, {2} and {3} Respectively".
           format(band, band_RefMul, band_RefAdd, radiance))
     print("Setting NoData Value and Executing Radiometric Calibration...")
@@ -146,7 +138,7 @@ def landsatComposite(resultsWorkspace):
     for path, dirs, files in os.walk(reflectanceFolder):
         for directory in dirs:
             compWorkspace = os.path.join(path, directory)
-            print("compWorkspace")
+            print(compWorkspace)
             try:
                 arcpy.env.workspace = compWorkspace
                 arcpy.env.overwriteOutput = True
@@ -157,11 +149,10 @@ def landsatComposite(resultsWorkspace):
                 RefCorrBands = arcpy.ListRasters(raster_type="TIF")
                 print("Running Band Composite...")
                 arcpy.CompositeBands_management(in_rasters=RefCorrBands, out_raster=outFileSave)
-                print("Composite Completed")
+                print("Composite Completed\n")
             except IOError:
                 print("Error Accessing File")
-    print("\n\nComposite Operation Completed")
     print("\n\nAll Operations Complete".upper())
 
 
-landsatPreProcess()
+removeGapMaskDir()
