@@ -1,8 +1,8 @@
 import os
 import math
 import arcpy    # Arcpy 3.8 (Arcpy Pro)
-import pathlib
 import shutil
+import pathlib
 from itertools import chain
 
 """To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it
@@ -14,65 +14,58 @@ sunElev = 0
 GainsOffset = {}
 
 
-def removeGapMaskDir():
-    rootDir = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Uncompress'))
-    for root, folders, files in os.walk(rootDir):
+def landsatPreProcess():
+    ResultsFolder = pathlib.Path(os.path.join(os.path.dirname(__file__), "Processed"))
+    os.makedirs(ResultsFolder, exist_ok=True)
+    print("\n\nResults Folder Created\n")
+    workingDir = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Uncompress'))
+    for root, folders, files in os.walk(workingDir):
         for folder in folders:
             if folder.startswith('gap_mask'):
                 gapMaskDir = os.path.join(root, folder)
                 shutil.rmtree(gapMaskDir)
                 print(gapMaskDir, " Deleted")
-    landsatPreProcess(rootDir)
-
-
-def landsatPreProcess(workingDir):
-    ResultsFolder = pathlib.Path(os.path.join(os.path.dirname(__file__), "Processed"))
-    os.makedirs(ResultsFolder, exist_ok=True)
-    print("\n\nResults Folder Created\n")
-    for root, folders, files in os.walk(workingDir):
-        for folder in folders:
-            SceneDir = os.path.join(root, folder)
-            try:
-                print(SceneDir)
-                arcpy.env.workspace = SceneDir
-                arcpy.env.overwriteOutput = True
-                Scene = ((os.path.split(SceneDir))[-1])
-                RefSceneFolder = Scene + "_Preprocessed"
-                RefSavePath = os.path.join(ResultsFolder, "SurfaceReflectance",  RefSceneFolder)
-                os.makedirs(RefSavePath, exist_ok=True)
-                print("Surface Reflectance Directory for Bands Created")
-                arcpy.CheckOutExtension("spatial")
-                readSunElevation(SceneDir)
-                print("Retrieved Sun Elevation for Scene is {0}\n".format(sunElev))
-                radiance_cor = math.sin(math.radians(sunElev))
-                if Scene.startswith("LC08"):
-                    l8_bands = arcpy.ListRasters(raster_type="TIF")
-                    VisNir_bands = l8_bands[3:9]
-                    for band8 in VisNir_bands:
-                        print(band8)
-                        Correction(SceneDir, band8, radiance_cor, RefSavePath)
-                elif Scene.startswith("LE07"):
-                    l7 = arcpy.ListRasters(raster_type="TIF")
-                    visIR7 = list(chain(l7[0:5], [l7[7]]))
-                    for band7 in visIR7:
-                        print(band7)
-                        Correction(SceneDir, band7, radiance_cor, RefSavePath)
-                elif Scene.startswith("LT05") or Scene.startswith("LT04"):
-                    l54 = arcpy.ListRasters(raster_type="TIF")
-                    visIR54 = list(chain(l54[0:5], [l54[6]]))
-                    for band54 in visIR54:
-                        print(band54)
-                        Correction(SceneDir, band54, radiance_cor, RefSavePath)
-                elif Scene.startswith("LM04") or Scene.startswith("LM04"):
-                    l45 = arcpy.ListRasters(raster_type="TIF")
-                    visIR45 = l45[0:4]
-                    for band45 in visIR45:
-                        print(band45)
-                        Correction(SceneDir, band45, radiance_cor, RefSavePath)
-                else:
-                    print(Scene, " May Not Be a Valid Landsat Scene Folder")
-            except WindowsError:
-                print("Folder Already Exists")
+            else:
+                SceneDir = os.path.join(root, folder)
+                try:
+                    print(SceneDir)
+                    arcpy.env.workspace = SceneDir
+                    arcpy.env.overwriteOutput = True
+                    Scene = ((os.path.split(SceneDir))[-1])
+                    RefSceneFolder = Scene + "_Preprocessed"
+                    RefSavePath = os.path.join(ResultsFolder, "SurfaceReflectance",  RefSceneFolder)
+                    os.makedirs(RefSavePath, exist_ok=True)
+                    print("Surface Reflectance Directory for Bands Created")
+                    arcpy.CheckOutExtension("spatial")
+                    readSunElevation(SceneDir)
+                    print("Retrieved Sun Elevation for Scene is {0}\n".format(sunElev))
+                    radiance_cor = math.sin(math.radians(sunElev))
+                    if Scene.startswith("LC08"):
+                        l8_bands = arcpy.ListRasters(raster_type="TIF")
+                        VisNir_bands = l8_bands[3:9]
+                        for band8 in VisNir_bands:
+                            print(band8)
+                            Correction(SceneDir, band8, radiance_cor, RefSavePath)
+                    elif Scene.startswith("LE07"):
+                        l7 = arcpy.ListRasters(raster_type="TIF")
+                        visIR7 = list(chain(l7[0:5], [l7[7]]))
+                        for band7 in visIR7:
+                            print(band7)
+                            Correction(SceneDir, band7, radiance_cor, RefSavePath)
+                    elif Scene.startswith("LT05") or Scene.startswith("LT04"):
+                        l54 = arcpy.ListRasters(raster_type="TIF")
+                        visIR54 = list(chain(l54[0:5], [l54[6]]))
+                        for band54 in visIR54:
+                            print(band54)
+                            Correction(SceneDir, band54, radiance_cor, RefSavePath)
+                    elif Scene.startswith("LM04") or Scene.startswith("LM04"):
+                        l45 = arcpy.ListRasters(raster_type="TIF")
+                        visIR45 = l45[0:4]
+                        for band45 in visIR45:
+                            print(band45)
+                            Correction(SceneDir, band45, radiance_cor, RefSavePath)
+                except WindowsError:
+                    print("Folder Already Exists")
     landsatComposite(ResultsFolder)
 
 
@@ -106,7 +99,6 @@ def readGainsOffset(curWorkspace, bandValue):
 
 
 def Correction(env, band, radiance, saveDir):
-    arcpy.CheckOutExtension('Spatial')
     specificBand = str(band.split("_")[-1][1])
     readGainsOffset(env, specificBand)
     band_RefMul = GainsOffset['REFLECTANCE_MULT_BAND_' + specificBand]
@@ -120,8 +112,8 @@ def Correction(env, band, radiance, saveDir):
     bandNom_P1 = arcpy.sa.Times(band, band_RefMul)
     bandNom_P2 = arcpy.sa.Plus(bandNom_P1, band_RefAdd)
     bandCor = arcpy.sa.Divide(bandNom_P2, radiance)
-    bandCor_min = arcpy.GetRasterProperties_management(in_raster=bandCor, property_type="MINIMUM")
-    bandCor_minVal = float(bandCor_min.getOutput(0))
+    bandCor_minVal = float((arcpy.GetRasterProperties_management(in_raster=bandCor, property_type="MINIMUM")).
+                           getOutput(0))
     band_refCor = arcpy.sa.Minus(bandCor, bandCor_minVal)
     print("Saving Surface Reflectance Output...")
     OutRefName = (os.path.join(saveDir, bandName))
@@ -155,4 +147,4 @@ def landsatComposite(resultsWorkspace):
     print("\n\nAll Operations Complete".upper())
 
 
-removeGapMaskDir()
+landsatPreProcess()
