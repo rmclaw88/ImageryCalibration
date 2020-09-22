@@ -228,7 +228,7 @@ def LandSurfaceTemperature(finalWorkspace):
     for root, directories, files in os.walk(finalWorkspace):
         for directory in directories:
             workspace = os.path.join(root, directory)
-            print("\n\n", workspace)
+            print("\n", workspace)
             try:
                 arcpy.env.workspace = workspace
                 arcpy.env.overwriteOutput = True
@@ -236,57 +236,49 @@ def LandSurfaceTemperature(finalWorkspace):
                 folderSplit = directory.split("_")
                 LSTName = "Scene_" + folderSplit[2] + "_" + folderSplit[3] + "_TempK.tif"
                 BTLayers = arcpy.ListRasters(wild_card="*BrightTemp*")
-                emissivity = arcpy.ListRasters(wild_card="*Emissivity*")
+                emissivityLayer = arcpy.ListRasters(wild_card="*Emissivity*")
+                Emissivity = emissivityLayer[0]
                 pConstant = 14380
                 if workspace.__contains__("LC08"):
                     LST8_layers = []
                     radianceWavelengths = [10.8, 12]
                     for layer, radiance in zip(BTLayers, radianceWavelengths):
-                        print("Calculating Land Surface Temperature for {0} using Emitted Radiance Wavelength of {1}"
-                              .format(layer, radiance))
-                        LST_part1 = Divide(layer, pConstant)
-                        LST_part2 = Times(float(radiance), LST_part1)
-                        LST_part3 = Ln(emissivity[0])
-                        LST_part4 = Times(LST_part2, LST_part3)
-                        LST_part5 = Plus(1, LST_part4)
-                        LST = Divide(layer, LST_part5)
-                        LST8_layers.append(LST)
-                    print("Calculating the Average Land Surface Temperature of the 2 Bands")
+                        computeLST(layer, radiance, pConstant, Emissivity, LST8_layers)
+                    print("Calculating the Average Land Surface Temperature of the 2 Bands...")
                     averageLST = CellStatistics(LST8_layers, statistics_type="MEAN")
                     averageLST.save(LSTName)
-                    print("Saved LST Layer\n")
+                    print("Saved LST Layer")
                 elif workspace.__contains__("LE07"):
                     LST7_layers = []
                     radiance7 = 11.5
                     for layer in BTLayers:
-                        print("Calculating Land Surface Temperature for {0} using Emitted Radiance Wavelength of {1}"
-                              .format(layer, radiance7))
-                        LST_part1 = Divide(layer, pConstant)
-                        LST_part2 = Times(float(radiance7), LST_part1)
-                        LST_part3 = Ln(emissivity[0])
-                        LST_part4 = Times(LST_part2, LST_part3)
-                        LST_part5 = Plus(1, LST_part4)
-                        LST = Divide(layer, LST_part5)
-                        LST7_layers.append(LST)
-                    averageLST = CellStatistics(LST7_layers, statistics_type="MEAN")
-                    print("Calculating the Average Land Surface Temperature of the 2 Bands")
-                    averageLST.save(LSTName)
-                    print("Saved LST Layer\n")
+                        computeLST(layer, radiance7, pConstant, Emissivity, LST7_layers)
+                    averageLST7 = CellStatistics(LST7_layers, statistics_type="MEAN")
+                    print("Calculating the Average Land Surface Temperature of the 2 Bands...")
+                    averageLST7.save(LSTName)
+                    print("Saved LST Layer")
                 else:
                     radiance54 = 11.5
-                    ("Calculating Land Surface Temperature for {0} using Emitted Radiance Wavelength of {1}"
-                     .format(BTLayers[0], radiance54))
-                    LST_part1 = Divide(BTLayers[0], pConstant)
-                    LST_part2 = Times(float(radiance54), LST_part1)
-                    LST_part3 = Ln(emissivity[0])
-                    LST_part4 = Times(LST_part2, LST_part3)
-                    LST_part5 = Plus(1, LST_part4)
-                    LST = Divide(BTLayers[0], LST_part5)
-                    LST.save(LSTName)
-                    print("Saved LST Layer\n")
+                    LST54_Layers = []
+                    computeLST(BTLayers[0], radiance54, pConstant, Emissivity, LST54_Layers)
+                    LST54 = LST54_Layers[0]
+                    LST54.save(LSTName)
+                    print("Saved LST Layer")
             except IndexError:
                 print("Index out of Range")
     print("all lst computation operation completed".upper())
+
+
+def computeLST(BTLayer, rad, planckConstant, emissivity, compLIST):
+    print("Calculating Land Surface Temperature for {0} using Emitted Radiance Wavelength of {1}..."
+          .format(BTLayer, rad))
+    LST_part1 = Divide(BTLayer, planckConstant)
+    LST_part2 = Times(float(rad), LST_part1)
+    LST_part3 = Ln(emissivity)
+    LST_part4 = Times(LST_part2, LST_part3)
+    LST_part5 = Plus(1, LST_part4)
+    LST = Divide(BTLayer, LST_part5)
+    compLIST.append(LST)
 
 
 landsatPreProcess()
