@@ -30,18 +30,13 @@ def landsatPreProcess():
                     print(SceneDir)
                     arcpy.env.workspace = SceneDir
                     arcpy.env.overwriteOutput = True
+                    arcpy.CheckOutExtension("spatial")
                     Scene = ((os.path.split(SceneDir))[-1])
                     TempSceneFolder = Scene + "_Temperature"
-                    TempSavePath = os.path.join(ResultsFolder, "SceneTemperature",  TempSceneFolder)
-                    os.makedirs(TempSavePath, exist_ok=True)
-                    print("Save Directory for Temperature Outputs Created")
-                    arcpy.CheckOutExtension("spatial")
+                    TempSavePath = os.path.join(ResultsFolder, "SceneTemperature", TempSceneFolder)
                     metadata = arcpy.ListFiles(wild_card="*MTL.txt")
-                    metaDir = os.path.join(workingDir, SceneDir, metadata[0])
-                    newMetaDir = os.path.join(TempSavePath, metadata[0])
-                    print("Metadata Exported")
-                    shutil.copy2(metaDir, newMetaDir)
                     if Scene.startswith("LC08"):
+                        makeDir(TempSavePath, SceneDir, metadata)
                         l8 = arcpy.ListRasters(raster_type="TIF")
                         VisIRTir8 = list(chain(l8[5:7], l8[1:3]))
                         for band8 in VisIRTir8:
@@ -50,6 +45,7 @@ def landsatPreProcess():
                                 ".TIF") + "_TOARad.tif"
                             Correction(SceneDir, band8, bandName8, TempSavePath)
                     elif Scene.startswith("LE07"):
+                        makeDir(TempSavePath, SceneDir, metadata)
                         l7 = arcpy.ListRasters(raster_type="TIF")
                         VisIRTir7 = list(chain(l7[2:4], l7[5:7]))
                         for band7 in VisIRTir7:
@@ -63,6 +59,7 @@ def landsatPreProcess():
                                             ret_name[7].strip(".TIF") + "_TOARad.tif"
                                 Correction(SceneDir, band7, bandName7, TempSavePath)
                     elif Scene.startswith("LT05") or Scene.startswith("LT04"):
+                        makeDir(TempSavePath, SceneDir, metadata)
                         l54 = arcpy.ListRasters(raster_type="TIF")
                         bands54 = list(chain(l54[2:4], [l54[5]]))
                         for band54 in bands54:
@@ -70,9 +67,20 @@ def landsatPreProcess():
                             bandName54 = "Scene_" + ret_name[2] + "_" + ret_name[3] + "_" + ret_name[7].strip(
                                 ".TIF") + "_TOARad.tif"
                             Correction(SceneDir, band54, bandName54, TempSavePath)
+                    else:
+                        print("Landsat Scene Does Not Contain any Thermal Bands\nSkipped!!!\n")
                 except WindowsError:
                     print("Folder Already Exists")
     NDVI_Emissivity(ResultsFolder)
+
+
+def makeDir(OutputPath, SceneFolder, metaFile):
+    os.makedirs(OutputPath, exist_ok=True)
+    print("Save Directory for Temperature Outputs Created")
+    metaDir = os.path.join(SceneFolder, metaFile[0])
+    newMetaDir = os.path.join(OutputPath, metaFile[0])
+    shutil.copy2(metaDir, newMetaDir)
+    print("Metadata Exported\n")
 
 
 def Correction(env, band, saveName, saveDir):
@@ -81,7 +89,7 @@ def Correction(env, band, saveName, saveDir):
     bandValueL7 = str(bandSplit[-3].lstrip("B") + "_VCID_" + bandSplit[-1].strip(".TIF"))
     readGainsOffSet(env, band, bandValue, bandValueL7)
     G_OValues = []
-    if band.__contains__("LE07" and "B6"):
+    if band.__contains__("LE07") and band.__contains__("B6"):
         G_OValues.append(GainsOffset["RADIANCE_MULT_BAND_" + bandValueL7])
         G_OValues.append(GainsOffset["RADIANCE_ADD_BAND_" + bandValueL7])
     else:
@@ -105,7 +113,7 @@ def readGainsOffSet(curWorkspace, layer, layerValue, LayerValue7):
             if file.endswith("MTL.txt"):
                 metadata = os.path.join(root, file)
                 with open(metadata, "r") as MTL:
-                    if layer.__contains__("LE07" and "B6"):
+                    if layer.__contains__("LE07") and layer.__contains__("B6"):
                         for line in MTL:
                             if line.__contains__("RADIANCE_MULT_BAND_" + LayerValue7) or \
                                     line.__contains__("RADIANCE_ADD_BAND_" + LayerValue7):
@@ -274,10 +282,8 @@ def computeLST(BTLayer, rad, planckConstant, emissivity, compLIST):
           .format(BTLayer, rad))
     LST_part1 = Divide(BTLayer, planckConstant)
     LST_part2 = Times(float(rad), LST_part1)
-    LST_part3 = Ln(emissivity)
-    LST_part4 = Times(LST_part2, LST_part3)
-    LST_part5 = Plus(1, LST_part4)
-    LST = Divide(BTLayer, LST_part5)
+    LST_part4 = Plus(1, Times(LST_part2, Ln(emissivity)))
+    LST = Divide(BTLayer, LST_part4)
     compLIST.append(LST)
 
 
