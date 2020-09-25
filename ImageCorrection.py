@@ -58,7 +58,7 @@ def landsatPreProcess():
                         for band54 in visIR54:
                             print(band54)
                             Correction(SceneDir, band54, radiance_cor, RefSavePath)
-                    elif Scene.startswith("LM04") or Scene.startswith("LM04"):
+                    elif Scene.startswith("LM04") or Scene.startswith("LM05"):
                         l45 = arcpy.ListRasters(raster_type="TIF")
                         visIR45 = l45[0:4]
                         for band45 in visIR45:
