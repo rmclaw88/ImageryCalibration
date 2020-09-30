@@ -5,7 +5,7 @@ import pathlib
 from arcpy.sa import *
 from itertools import chain
 
-"""Perform Brightness Temperature, Land Surface Temperature and Composite on VIS-IR Bands For Landsat Sensors 5,7 and 8.
+"""Perform Brightness Temperature and Land Surface Temperature  Landsat Sensors 4, 5, 7 and 8.
 To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it
 The Uncompress folder should be in the same root directory as this python file."""
 
