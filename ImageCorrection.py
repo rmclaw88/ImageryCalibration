@@ -6,11 +6,11 @@ import tarfile
 import pathlib
 from itertools import chain
 
-"""To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it
-The Uncompress folder should be in the same root directory as this python file
-Only for Landsat Data
-No protocol to fill Landsat 7 Scan Line Error
-Used to Perform Radiometric Calibration, Atmospheric Correction and Composite on VIS-IR Bands"""
+"""To Use, Create a folder Named 'Compress' and DUMP All Compressed Landsat data within it.
+The Compress folder should be in the same root directory as this python file.
+Converts Digital Number to Surface Reflectance (Radiometric Calibration & Atmospheric Correction).
+Executes Composites/ Band Stacking on the Visible-InfraRed Bands.
+Only for Landsat Sensor Data (MSS, TM, ETM+ and OLI). No protocol to fill Landsat 7 Scan Line Error"""
 
 sunElev = 0
 GainsOffset = {}
