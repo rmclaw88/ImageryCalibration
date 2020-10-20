@@ -2,22 +2,40 @@ import os
 import math
 import arcpy    # Arcpy 3.8 (Arcpy Pro)
 import shutil
+import tarfile
 import pathlib
 from itertools import chain
 
 """To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it
 The Uncompress folder should be in the same root directory as this python file
-For Only Landsat TM, ETM+ and OLI (5,7 and 8 Respectively)
+Only for Landsat Data
+No protocol to fill Landsat 7 Scan Line Error
 Used to Perform Radiometric Calibration, Atmospheric Correction and Composite on VIS-IR Bands"""
 
 sunElev = 0
 GainsOffset = {}
 
 
+def Uncompress():
+    currentDirectory = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Compress'))
+    for currentFile in currentDirectory.iterdir():
+        try:
+            uncompress_path = os.path.join(os.path.dirname(__file__),
+                                           'Uncompress/%s' % (currentFile.name.replace('.tar.gz', '')))
+            os.makedirs(uncompress_path, exist_ok=False)
+            print('UNZIPPING\t', currentFile, '\nINTO\t\t', uncompress_path, '\n')
+            tar_ref = tarfile.open(currentFile, 'r')
+            tar_ref.extractall(uncompress_path)
+            tar_ref.close()
+        except IOError:
+            print('cannot unzip file, folder %s already exist' % currentFile.name)
+    landsatPreProcess()
+
+
 def landsatPreProcess():
     ResultsFolder = pathlib.Path(os.path.join(os.path.dirname(__file__), "Processed"))
     os.makedirs(ResultsFolder, exist_ok=True)
-    print("\n\nResults Folder Created\n")
+    print("\n\nStarting Radiometric and Atmospheric Correction...\nResults Folder Created\n")
     workingDir = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Uncompress'))
     for root, folders, files in os.walk(workingDir):
         for folder in folders:
@@ -35,7 +53,7 @@ def landsatPreProcess():
                     RefSceneFolder = Scene + "_Preprocessed"
                     RefSavePath = os.path.join(ResultsFolder, "SurfaceReflectance",  RefSceneFolder)
                     os.makedirs(RefSavePath, exist_ok=True)
-                    print("Surface Reflectance Directory for Bands Created")
+                    print("Surface Reflectance Directory for ", folder, " Created")
                     arcpy.CheckOutExtension("spatial")
                     readSunElevation(SceneDir)
                     print("Retrieved Sun Elevation for Scene is {0}\n".format(sunElev))
@@ -112,13 +130,15 @@ def Correction(env, band, radiance, saveDir):
     bandNom_P1 = arcpy.sa.Times(band, band_RefMul)
     bandNom_P2 = arcpy.sa.Plus(bandNom_P1, band_RefAdd)
     bandCor = arcpy.sa.Divide(bandNom_P2, radiance)
-    bandCor_minVal = float((arcpy.GetRasterProperties_management(in_raster=bandCor, property_type="MINIMUM")).
-                           getOutput(0))
-    band_refCor = arcpy.sa.Minus(bandCor, bandCor_minVal)
-    print("Saving Surface Reflectance Output...")
+    bandMinVal = float((arcpy.GetRasterProperties_management(in_raster=bandCor, property_type="MINIMUM")).getOutput(0))
+    bandStdVal = float((arcpy.GetRasterProperties_management(in_raster=bandCor, property_type="STD")).getOutput(0))
+    bandThreshold = float(bandMinVal + bandStdVal)
+    print("{0} has a Minimum, StdDev and Threshold values of {1}, {2} & {3} Respectively".
+          format(band, bandMinVal, bandStdVal, bandThreshold))
+    band_refCor = arcpy.sa.Minus(bandCor, bandThreshold)
+    print("Saving Surface Reflectance Output...\n")
     OutRefName = (os.path.join(saveDir, bandName))
     band_refCor.save(OutRefName)
-    print("Saved Radiometric Calibration for " + band + "\n")
 
 
 def landsatComposite(resultsWorkspace):
@@ -147,4 +167,4 @@ def landsatComposite(resultsWorkspace):
     print("\n\nAll Operations Complete".upper())
 
 
-landsatPreProcess()
+Uncompress()
