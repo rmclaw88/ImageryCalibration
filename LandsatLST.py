@@ -1,6 +1,7 @@
 import os
 import arcpy    # Arcpy 3.8 (Arcpy Pro)
 import shutil
+import tarfile
 import pathlib
 from arcpy.sa import *
 from itertools import chain
@@ -11,6 +12,22 @@ The Uncompress folder should be in the same root directory as this python file."
 
 GainsOffset = {}
 bandKConstant = {}
+
+
+def uncompress():
+    currentDirectory = pathlib.Path(os.path.join(os.path.dirname(__file__), 'Compress'))
+    for currentFile in currentDirectory.iterdir():
+        try:
+            uncompress_path = os.path.join(os.path.dirname(__file__),
+                                           'Uncompress/%s' % (currentFile.name.replace('.tar.gz', '')))
+            os.makedirs(uncompress_path, exist_ok=False)
+            print('UNZIPPING\t', currentFile, '\nINTO\t\t', uncompress_path, '\n')
+            tar_ref = tarfile.open(currentFile, 'r')
+            tar_ref.extractall(uncompress_path)
+            tar_ref.close()
+        except IOError:
+            print('cannot unzip file, folder %s already exist' % currentFile.name)
+        landsatPreProcess()
 
 
 def landsatPreProcess():
@@ -181,7 +198,6 @@ def computeNDVIEmissivity(ndviWorkspace, VisIRBands):
     emissivity = Plus(emissivity1, float(0.986))
     emissivity.save(emissivityName)
     print("Emissivity Saved as ", emissivityName)
-    return emissivity
 
 
 def computeBrightTemp(brightTempWorkspace, TIRBands):
@@ -291,4 +307,4 @@ def computeLST(BTLayer, rad, planckConstant, emissivity, compLIST):
     compLIST.append(LST)
 
 
-landsatPreProcess()
+uncompress()
