@@ -6,11 +6,11 @@ import tarfile
 import pathlib
 from itertools import chain
 
-"""To Use, Create a folder Named 'Compress' and DUMP All Compressed Landsat data within it.
+"""Converts Raw Digital Number to Surface Reflectance (Radiometric Calibration & Atmospheric Correction), 
+and executes Composites/ Band Stacking on the Visible-InfraRed Bands for Landsat Senor Data (MSS, TM, ETM+ and OLI).
+To Use, Create a folder Named 'Compress' and DUMP All Compressed Landsat data within it.
 The Compress folder should be in the same root directory as this python file.
-Converts Digital Number to Surface Reflectance (Radiometric Calibration & Atmospheric Correction).
-Executes Composites/ Band Stacking on the Visible-InfraRed Bands.
-Only for Landsat Sensor Data (MSS, TM, ETM+ and OLI). No protocol to fill Landsat 7 Scan Line Error"""
+No protocol to gap-fill Landsat 7."""
 
 sunElev = 0
 GainsOffset = {}

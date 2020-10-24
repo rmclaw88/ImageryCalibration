@@ -6,9 +6,9 @@ import pathlib
 from arcpy.sa import *
 from itertools import chain
 
-"""Perform Brightness Temperature and Land Surface Temperature  Landsat Sensors 4, 5, 7 and 8.
-To Use, Create a folder Named 'Uncompress' and DUMP All your landsat Scene folder within it
-The Uncompress folder should be in the same root directory as this python file."""
+"""Calculate Brightness Temperature and Land Surface Temperature in Kelvin on Landsat Sensors (TM, ETM+ and OLI).
+To Use, Create a folder Named 'Compress' and DUMP compressed Landsat data within
+The 'Compress' folder should be in the same root directory as this python file."""
 
 GainsOffset = {}
 bandKConstant = {}
