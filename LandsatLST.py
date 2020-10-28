@@ -27,7 +27,7 @@ def uncompress():
             tar_ref.close()
         except IOError:
             print('cannot unzip file, folder %s already exist' % currentFile.name)
-        landsatPreProcess()
+    landsatPreProcess()
 
 
 def landsatPreProcess():
