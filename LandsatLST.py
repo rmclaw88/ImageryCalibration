@@ -88,7 +88,7 @@ def landsatPreProcess():
                         print("Landsat Scene Does Not Contain any Thermal Bands\nSkipped!!!\n")
                 except WindowsError:
                     print("Folder Already Exists")
-    NDVI_Emissivity(ResultsFolder)
+    BrightTemp_Emissivity(ResultsFolder)
 
 
 def makeDir(OutputPath, SceneFolder, metaFile):
@@ -145,7 +145,7 @@ def readGainsOffSet(curWorkspace, layer, layerValue, LayerValue7):
                 MTL.close()
 
 
-def NDVI_Emissivity(ProcessedWorkspace):
+def BrightTemp_Emissivity(ProcessedWorkspace):
     TempWorkspace = os.path.join(ProcessedWorkspace, "SceneTemperature")
     for path, dirs, files in os.walk(TempWorkspace):
         for directory in dirs:
@@ -196,10 +196,7 @@ def computeNDVIEmissivity(ndviWorkspace, VisIRBands):
     vegProp = Power(Divide(vegPropNom, vegPropDenom), 2)
     emissivity1 = Times(float(0.004), vegProp)
     emissivity = Plus(emissivity1, float(0.986))
-    print("Resampling Emissivity Result to Match Resolution of Thermal Bands...")
-    arcpy.Resample_management(in_raster=emissivity, out_raster=emissivityName, cell_size="100",
-                              resampling_type="NEAREST")
-    # emissivity.save(emissivityName)
+    emissivity.save(emissivityName)
     print("Emissivity Saved as ", emissivityName)
 
 
