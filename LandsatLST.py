@@ -196,7 +196,10 @@ def computeNDVIEmissivity(ndviWorkspace, VisIRBands):
     vegProp = Power(Divide(vegPropNom, vegPropDenom), 2)
     emissivity1 = Times(float(0.004), vegProp)
     emissivity = Plus(emissivity1, float(0.986))
-    emissivity.save(emissivityName)
+    print("Resampling Emissivity Result to Match Resolution of Thermal Bands...")
+    arcpy.Resample_management(in_raster=emissivity, out_raster=emissivityName, cell_size="100",
+                              resampling_type="NEAREST")
+    # emissivity.save(emissivityName)
     print("Emissivity Saved as ", emissivityName)
 
 
@@ -271,7 +274,7 @@ def LandSurfaceTemperature(finalWorkspace):
                         LST8_layers = []
                         radianceWavelengths = [10.8, 12]
                         for layer, radiance in zip(BTLayers, radianceWavelengths):
-                            computeLST(layer, radiance, pConstant, Emissivity, LST8_layers)
+                            computeLST(layer, radiance, pConstant, Emissivity,  LST8_layers)
                         print("Calculating the Average Land Surface Temperature of the 2 Bands...")
                         averageLST8 = CellStatistics(LST8_layers, statistics_type="MEAN")
                         averageLST8.save(os.path.join(LSTDir, LSTName))

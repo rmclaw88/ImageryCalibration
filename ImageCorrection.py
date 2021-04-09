@@ -57,31 +57,31 @@ def landsatPreProcess():
                     arcpy.CheckOutExtension("spatial")
                     readSunElevation(SceneDir)
                     print("Retrieved Sun Elevation for Scene is {0}\n".format(sunElev))
-                    radiance_cor = math.sin(math.radians(sunElev))
+                    sunElev_Rad = math.sin(math.radians(sunElev))
                     if Scene.startswith("LC08"):
                         l8_bands = arcpy.ListRasters(raster_type="TIF")
                         VisNir_bands = l8_bands[3:9]
                         for band8 in VisNir_bands:
                             print(band8)
-                            Correction(SceneDir, band8, radiance_cor, RefSavePath)
+                            Correction(SceneDir, band8, sunElev_Rad, RefSavePath)
                     elif Scene.startswith("LE07"):
                         l7 = arcpy.ListRasters(raster_type="TIF")
                         visIR7 = list(chain(l7[0:5], [l7[7]]))
                         for band7 in visIR7:
                             print(band7)
-                            Correction(SceneDir, band7, radiance_cor, RefSavePath)
+                            Correction(SceneDir, band7, sunElev_Rad, RefSavePath)
                     elif Scene.startswith("LT05") or Scene.startswith("LT04"):
                         l54 = arcpy.ListRasters(raster_type="TIF")
                         visIR54 = list(chain(l54[0:5], [l54[6]]))
                         for band54 in visIR54:
                             print(band54)
-                            Correction(SceneDir, band54, radiance_cor, RefSavePath)
+                            Correction(SceneDir, band54, sunElev_Rad, RefSavePath)
                     elif Scene.startswith("LM04") or Scene.startswith("LM05"):
                         l45 = arcpy.ListRasters(raster_type="TIF")
                         visIR45 = l45[0:4]
                         for band45 in visIR45:
                             print(band45)
-                            Correction(SceneDir, band45, radiance_cor, RefSavePath)
+                            Correction(SceneDir, band45, sunElev_Rad, RefSavePath)
                 except WindowsError:
                     print("Folder Already Exists")
     landsatComposite(ResultsFolder)
